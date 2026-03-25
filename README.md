@@ -1,7 +1,7 @@
 # SkillFlow MCP Server
 
 [![Available on SkillFlow](https://raw.githubusercontent.com/rafsilva85/awesome-ai-skills/main/badges/skillflow-available.svg)](https://skillflow.builders)
-[![npm version](https://img.shields.io/npm/v/skillflow-mcp-server.svg)](https://www.npmjs.com/package/skillflow-mcp-server)
+[![npm version](https://img.shields.io/npm/v/skillflow-mcp-server.svg)](https://github.com/rafsilva85/skillflow-mcp-server)
 
 A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that connects AI coding agents to the [SkillFlow](https://skillflow.builders) marketplace. Search, discover, and install AI agent skills directly from Claude, Cursor, Copilot, Gemini CLI, and more.
 
