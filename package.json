@@ -1,0 +1,38 @@
+{
+  "name": "skillflow-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for SkillFlow — Search, discover, and install AI agent skills from the SkillFlow marketplace directly from any AI coding agent.",
+  "main": "dist/index.js",
+  "bin": {
+    "skillflow-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "skills",
+    "skillflow",
+    "claude",
+    "cursor",
+    "copilot"
+  ],
+  "author": "Rafael Silva <rafa.amaralsilva@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://skillflow.builders",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rafsilva85/skillflow-mcp-server"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0"
+  }
+}
