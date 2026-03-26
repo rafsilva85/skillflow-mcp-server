@@ -1,77 +1,275 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { randomUUID } from "crypto";
 
-// Skills database
-const SKILLS_DATABASE = [
-  { id: "credit-optimizer-v5", name: "Credit Optimizer v5", description: "Automatic Manus credit optimizer - ZERO quality loss. Typical savings of 30-75%.", category: "Productivity", tags: ["manus","optimization","credits","cost-saving"], trust_score: 95, platforms: ["Manus"], install: "Copy to ~/skills/credit-optimizer/", publisher: "rafsilva85", trending: true, downloads: 1250 },
-  { id: "fast-navigation", name: "Fast Navigation", description: "Accelerate web navigation in Manus sandbox by 30-2000x using programmatic toolkit.", category: "Development", tags: ["web","scraping","performance","httpx"], trust_score: 92, platforms: ["Manus"], install: "Copy to ~/skills/fast-navigation/", publisher: "rafsilva85", trending: true, downloads: 980 },
-  { id: "skill-creator", name: "Skill Creator", description: "Guide for creating or updating skills that extend Manus via specialized knowledge.", category: "Development", tags: ["skills","creation","manus","meta"], trust_score: 90, platforms: ["Manus"], install: "Copy to ~/skills/skill-creator/", publisher: "rafsilva85", trending: false, downloads: 750 },
-  { id: "conexao-remota", name: "Conexão Remota PCs", description: "Remote access to devices with complete credential ecosystem and automation.", category: "DevOps", tags: ["remote","ssh","automation","devices"], trust_score: 88, platforms: ["Manus"], install: "Copy to ~/skills/conexao-remota-pcs/", publisher: "rafsilva85", trending: false, downloads: 620 },
-  { id: "skill-finder", name: "Skill Finder", description: "Automatically find, evaluate, and install the best AI agent skills for any prompt.", category: "Productivity", tags: ["search","discovery","skills","marketplace"], trust_score: 91, platforms: ["Manus"], install: "Copy to ~/skills/skill-finder/", publisher: "rafsilva85", trending: true, downloads: 1100 },
-  { id: "github-pr-manager", name: "GitHub PR Manager", description: "Automate GitHub PR creation, review, and management across multiple repositories.", category: "Development", tags: ["github","pr","automation","git"], trust_score: 87, platforms: ["Claude Desktop","Cursor","Manus"], install: "npx @skillflow/github-pr-manager", publisher: "community", trending: false, downloads: 450 },
-  { id: "seo-analyzer", name: "SEO Analyzer", description: "Comprehensive SEO analysis tool for websites with actionable recommendations.", category: "Marketing", tags: ["seo","marketing","analysis","web"], trust_score: 85, platforms: ["Claude Desktop","Manus"], install: "npx @skillflow/seo-analyzer", publisher: "community", trending: false, downloads: 380 },
-  { id: "data-pipeline", name: "Data Pipeline Builder", description: "Build and manage data pipelines with support for multiple data sources.", category: "Data", tags: ["data","etl","pipeline","automation"], trust_score: 86, platforms: ["Claude Desktop","Cursor","n8n"], install: "npx @skillflow/data-pipeline", publisher: "community", trending: true, downloads: 520 },
-];
+// ─── SkillFlow API Client ───────────────────────────────────────────────────
+const SKILLFLOW_API = "https://skillflow.builders/api/trpc";
+const SKILLFLOW_BASE = "https://skillflow.builders";
 
-const CATEGORIES = [
-  { name: "Development", description: "Tools for software development and coding", count: 15 },
-  { name: "Productivity", description: "Tools to boost productivity and workflow", count: 12 },
-  { name: "DevOps", description: "Infrastructure, deployment, and operations tools", count: 8 },
-  { name: "Data", description: "Data processing, analysis, and visualization", count: 6 },
-  { name: "Marketing", description: "Marketing, SEO, and growth tools", count: 5 },
-  { name: "Security", description: "Security scanning and vulnerability assessment", count: 4 },
-  { name: "Design", description: "UI/UX design and prototyping tools", count: 3 },
-  { name: "Communication", description: "Email, chat, and messaging integrations", count: 4 },
-  { name: "Finance", description: "Financial analysis and accounting tools", count: 2 },
-  { name: "Education", description: "Learning and training tools", count: 3 },
-];
+interface SkillSummary {
+  id: number;
+  slug: string;
+  name: string;
+  tagline: string;
+  description: string;
+  tags: string[];
+  priceType: string;
+  priceValue: number;
+  priceLabel: string;
+  successRate: number;
+  totalRuns: number;
+  trending: boolean;
+  subcategory: string;
+  categoryId: number;
+  creatorId: number;
+}
 
+interface SkillDetail extends SkillSummary {
+  avgSpeedMs: number;
+  avgRating: number;
+  reviewCount: number;
+  likeCount: number;
+  creator: { id: number; name: string };
+  creatorSkillCount: number;
+  creatorTotalRuns: number;
+  systemPrompt?: string;
+  sampleOutput?: string;
+}
+
+interface Category {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+}
+
+interface PlatformStats {
+  totalSkills: number;
+  totalRuns: number;
+  totalCreators: number;
+  totalRevenueCents: number;
+}
+
+// In-memory cache with TTL
+const cache: Record<string, { data: any; expires: number }> = {};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function fetchCached<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  if (cache[key] && cache[key].expires > now) {
+    return cache[key].data as T;
+  }
+  const data = await fetcher();
+  cache[key] = { data, expires: now + CACHE_TTL };
+  return data;
+}
+
+async function fetchSkills(): Promise<SkillSummary[]> {
+  return fetchCached("skills", async () => {
+    const res = await fetch(`${SKILLFLOW_API}/skills.list`);
+    const json = await res.json();
+    return json?.result?.data?.json?.skills ?? [];
+  });
+}
+
+async function fetchSkillBySlug(slug: string): Promise<SkillDetail | null> {
+  return fetchCached(`skill:${slug}`, async () => {
+    const input = encodeURIComponent(JSON.stringify({ json: { slug } }));
+    const res = await fetch(`${SKILLFLOW_API}/skills.bySlug?input=${input}`);
+    const json = await res.json();
+    return json?.result?.data?.json ?? null;
+  });
+}
+
+async function fetchCategories(): Promise<Category[]> {
+  return fetchCached("categories", async () => {
+    const res = await fetch(`${SKILLFLOW_API}/categories.list`);
+    const json = await res.json();
+    return json?.result?.data?.json ?? [];
+  });
+}
+
+async function fetchPlatformStats(): Promise<PlatformStats> {
+  return fetchCached("stats", async () => {
+    const res = await fetch(`${SKILLFLOW_API}/platform.stats`);
+    const json = await res.json();
+    return json?.result?.data?.json ?? { totalSkills: 0, totalRuns: 0, totalCreators: 0, totalRevenueCents: 0 };
+  });
+}
+
+// ─── Tool Definitions ───────────────────────────────────────────────────────
 const TOOLS = [
-  { name: "search_skills", description: "Search for AI agent skills on SkillFlow marketplace by keyword, category, or tag", inputSchema: { type: "object", properties: { query: { type: "string", description: "Search query" }, category: { type: "string", description: "Filter by category" }, min_trust_score: { type: "number", description: "Minimum trust score (0-100)" } }, required: ["query"] } },
-  { name: "get_skill_details", description: "Get detailed information about a specific skill", inputSchema: { type: "object", properties: { skill_id: { type: "string", description: "The skill ID" } }, required: ["skill_id"] } },
-  { name: "list_categories", description: "List all available skill categories on SkillFlow", inputSchema: { type: "object", properties: {} } },
-  { name: "get_trending_skills", description: "Get currently trending skills on SkillFlow marketplace", inputSchema: { type: "object", properties: { limit: { type: "number", description: "Maximum results (default: 5)" } } } },
-  { name: "get_publisher_info", description: "Get information about a skill publisher", inputSchema: { type: "object", properties: { publisher_id: { type: "string", description: "Publisher username" } }, required: ["publisher_id"] } },
+  {
+    name: "search_skills",
+    description: "Search for AI agent skills on SkillFlow marketplace by keyword, category, or tag. Returns matching skills with trust metrics and pricing.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search query (keyword, category name, or tag)" },
+        category: { type: "string", description: "Filter by category slug (e.g., 'lead-gen', 'create-content', 'automate-ops')" },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "get_skill_details",
+    description: "Get detailed information about a specific skill including description, pricing, performance metrics, and creator info.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slug: { type: "string", description: "The skill slug (e.g., 'blog-seo-writer', 'lead-qualifier-pro')" },
+      },
+      required: ["slug"],
+    },
+  },
+  {
+    name: "list_categories",
+    description: "List all available skill categories on SkillFlow with descriptions.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "get_trending_skills",
+    description: "Get currently trending skills on SkillFlow marketplace, sorted by popularity.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Maximum number of results (default: 5)" },
+      },
+    },
+  },
+  {
+    name: "get_platform_stats",
+    description: "Get overall SkillFlow platform statistics including total skills, runs, creators, and revenue.",
+    inputSchema: { type: "object", properties: {} },
+  },
 ];
 
-function handleToolCall(name: string, args: any): any {
-  switch (name) {
-    case "search_skills": {
-      const q = (args.query || "").toLowerCase();
-      let results = SKILLS_DATABASE.filter(s =>
-        s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q) ||
-        s.tags.some(t => t.includes(q)) || s.category.toLowerCase().includes(q)
-      );
-      if (args.category) results = results.filter(s => s.category.toLowerCase() === args.category.toLowerCase());
-      if (args.min_trust_score) results = results.filter(s => s.trust_score >= args.min_trust_score);
-      return { query: args.query, results_count: results.length, results: results.map(s => ({ id: s.id, name: s.name, description: s.description, category: s.category, trust_score: s.trust_score, platforms: s.platforms, install: s.install })) };
+// ─── Tool Handler ───────────────────────────────────────────────────────────
+async function handleToolCall(name: string, args: any): Promise<any> {
+  try {
+    switch (name) {
+      case "search_skills": {
+        const q = (args.query || "").toLowerCase();
+        const catFilter = (args.category || "").toLowerCase();
+        const skills = await fetchSkills();
+
+        let results = skills.filter((s) =>
+          s.name.toLowerCase().includes(q) ||
+          s.description.toLowerCase().includes(q) ||
+          s.tags.some((t) => t.toLowerCase().includes(q)) ||
+          s.subcategory?.toLowerCase().includes(q)
+        );
+
+        if (catFilter) {
+          const categories = await fetchCategories();
+          const cat = categories.find((c) => c.slug === catFilter || c.name.toLowerCase().includes(catFilter));
+          if (cat) {
+            results = results.filter((s) => s.categoryId === cat.id);
+          }
+        }
+
+        return {
+          query: args.query,
+          results_count: results.length,
+          results: results.map((s) => ({
+            slug: s.slug,
+            name: s.name,
+            tagline: s.tagline,
+            description: s.description,
+            tags: s.tags,
+            price: s.priceLabel,
+            total_runs: s.totalRuns,
+            success_rate: s.successRate,
+            trending: s.trending,
+            url: `${SKILLFLOW_BASE}/skill/${s.slug}`,
+          })),
+        };
+      }
+
+      case "get_skill_details": {
+        const slug = args.slug || args.skill_id;
+        const skill = await fetchSkillBySlug(slug);
+        if (!skill) return { error: "Skill not found", slug };
+
+        return {
+          slug: skill.slug,
+          name: skill.name,
+          tagline: skill.tagline,
+          description: skill.description,
+          tags: skill.tags,
+          price_type: skill.priceType,
+          price: skill.priceLabel,
+          total_runs: skill.totalRuns,
+          success_rate: skill.successRate,
+          avg_speed_ms: skill.avgSpeedMs,
+          avg_rating: skill.avgRating,
+          review_count: skill.reviewCount,
+          like_count: skill.likeCount,
+          trending: skill.trending,
+          creator: skill.creator?.name ?? "Unknown",
+          creator_total_skills: skill.creatorSkillCount,
+          creator_total_runs: skill.creatorTotalRuns,
+          marketplace_url: `${SKILLFLOW_BASE}/skill/${skill.slug}`,
+        };
+      }
+
+      case "list_categories": {
+        const categories = await fetchCategories();
+        return {
+          total_categories: categories.length,
+          categories: categories.map((c) => ({
+            slug: c.slug,
+            name: c.name,
+            description: c.description,
+          })),
+        };
+      }
+
+      case "get_trending_skills": {
+        const max = args.limit || 5;
+        const skills = await fetchSkills();
+        const trending = skills
+          .filter((s) => s.trending)
+          .sort((a, b) => b.totalRuns - a.totalRuns)
+          .slice(0, max);
+
+        return {
+          trending_count: trending.length,
+          skills: trending.map((s) => ({
+            slug: s.slug,
+            name: s.name,
+            tagline: s.tagline,
+            total_runs: s.totalRuns,
+            success_rate: s.successRate,
+            price: s.priceLabel,
+            url: `${SKILLFLOW_BASE}/skill/${s.slug}`,
+          })),
+        };
+      }
+
+      case "get_platform_stats": {
+        const stats = await fetchPlatformStats();
+        return {
+          total_skills: stats.totalSkills,
+          total_runs: stats.totalRuns,
+          total_creators: stats.totalCreators,
+          total_revenue: `$${(stats.totalRevenueCents / 100).toFixed(2)}`,
+        };
+      }
+
+      default:
+        return { error: `Unknown tool: ${name}` };
     }
-    case "get_skill_details": {
-      const skill = SKILLS_DATABASE.find(s => s.id === args.skill_id);
-      if (!skill) return { error: "Skill not found", skill_id: args.skill_id };
-      return { ...skill, marketplace_url: `https://skillflow.builders/skills/${skill.id}` };
-    }
-    case "list_categories":
-      return { total_categories: CATEGORIES.length, categories: CATEGORIES };
-    case "get_trending_skills": {
-      const max = args.limit || 5;
-      const trending = SKILLS_DATABASE.filter(s => s.trending).sort((a, b) => b.downloads - a.downloads).slice(0, max);
-      return { trending_count: trending.length, skills: trending.map(s => ({ id: s.id, name: s.name, description: s.description, trust_score: s.trust_score, downloads: s.downloads })) };
-    }
-    case "get_publisher_info": {
-      const skills = SKILLS_DATABASE.filter(s => s.publisher === args.publisher_id);
-      return { publisher_id: args.publisher_id, verified: args.publisher_id === "rafsilva85", skills_count: skills.length, skills: skills.map(s => ({ id: s.id, name: s.name, trust_score: s.trust_score })), profile_url: `https://skillflow.builders/publishers/${args.publisher_id}` };
-    }
-    default:
-      return { error: `Unknown tool: ${name}` };
+  } catch (err: any) {
+    return { error: `Failed to fetch data: ${err.message}` };
   }
 }
 
-// Session store
+// ─── Session Store ──────────────────────────────────────────────────────────
 const sessions = new Map<string, boolean>();
 
+// ─── Vercel Handler ─────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS preflight
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, mcp-session-id");
@@ -83,7 +281,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Health check
   if (req.method === "GET") {
-    res.status(200).json({ status: "ok", name: "skillflow-mcp", version: "1.1.0" });
+    const stats = await fetchPlatformStats().catch(() => null);
+    res.status(200).json({
+      status: "ok",
+      name: "skillflow-mcp",
+      version: "2.0.0",
+      data_source: "live",
+      skills_count: stats?.totalSkills ?? "unavailable",
+    });
     return;
   }
 
@@ -120,7 +325,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         result: {
           protocolVersion: "2025-03-26",
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: "skillflow", version: "1.1.0" },
+          serverInfo: { name: "skillflow", version: "2.0.0" },
         },
       });
       return;
@@ -143,7 +348,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     case "tools/call": {
       const toolName = params?.name;
       const toolArgs = params?.arguments || {};
-      const result = handleToolCall(toolName, toolArgs);
+      const result = await handleToolCall(toolName, toolArgs);
       res.status(200).json({
         jsonrpc: "2.0",
         id,

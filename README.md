@@ -6,19 +6,20 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Available on SkillFlow](https://raw.githubusercontent.com/rafsilva85/awesome-ai-skills/main/badges/skillflow-available.svg)](https://skillflow.builders)
 
-> Connect AI coding agents to 500+ curated AI skills. Zero config. No API keys. One command.
+> Connect AI coding agents to the SkillFlow AI skills marketplace. Live data. Zero config. One command.
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that connects AI coding agents to the [SkillFlow](https://skillflow.builders) marketplace — the curated AI skills marketplace with trust metrics and performance data.
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that connects AI coding agents to the [SkillFlow](https://skillflow.builders) marketplace — a curated AI skills marketplace with trust metrics and performance data.
 
 ## Why SkillFlow?
 
-AI agents are the new users. Instead of browsing a website, agents can now **programmatically search, discover, and install skills** from SkillFlow using the MCP protocol.
+AI agents are the new users. Instead of browsing a website, agents can now **programmatically search, discover, and evaluate skills** from SkillFlow using the MCP protocol.
 
 > "It's 2026. Build. For. Agents." — Andrej Karpathy
 
 **Key benefits:**
-- **500+ curated skills** across 20+ categories
-- **Trust metrics** — every skill has quality scores and real performance data
+- **Live API** — real-time data from the SkillFlow backend, not hardcoded
+- **Curated skills** across 6 business categories with performance metrics
+- **Trust metrics** — success rates, run counts, ratings, and speed benchmarks
 - **Zero config** — no API keys, no environment variables, just `npx`
 - **Works everywhere** — Claude Desktop, Cursor, Windsurf, Copilot, Gemini CLI, and any MCP-compatible agent
 
@@ -94,22 +95,21 @@ skillflow-mcp
 | Tool | Description |
 |------|-------------|
 | `search_skills` | Search for skills by keyword, category, or tag |
-| `get_skill_details` | Get detailed info about a specific skill including install instructions |
-| `list_categories` | List all 20+ skill categories |
-| `get_trending_skills` | Get currently trending and featured skills |
-| `get_featured_skills` | Get hand-picked featured skills |
-| `get_publisher_info` | Get info about a skill publisher |
+| `get_skill_details` | Get detailed info about a specific skill including pricing and performance |
+| `list_categories` | List all skill categories |
+| `get_trending_skills` | Get currently trending skills |
+| `get_platform_stats` | Get overall platform statistics (skills, runs, creators, revenue) |
 
 ## Examples
 
 Once connected, ask your AI agent:
 
-- *"Search for skills that help with Docker configuration"*
+- *"Search for skills that help with SEO content"*
 - *"What are the trending skills on SkillFlow?"*
-- *"Get details about the credit-optimizer-v5 skill"*
+- *"Get details about the blog-seo-writer skill"*
 - *"List all skill categories"*
-- *"Show me skills by publisher rafsilva85"*
-- *"Find skills for code review automation"*
+- *"Show me the platform stats"*
+- *"Find skills for lead generation"*
 
 ## Quick Start (Streamable HTTP — Remote)
 
@@ -138,19 +138,19 @@ Available at: [smithery.ai/server/skillflow-mcp-server](https://smithery.ai/serv
 | `POST` | `/mcp` | Send JSON-RPC requests (initialize, tools/list, tools/call) |
 | `GET` | `/mcp` | Open SSE stream for server notifications |
 | `DELETE` | `/mcp` | Terminate a session |
-| `GET` | `/health` | Health check |
+| `GET` | `/health` | Health check (includes live skill count) |
 
-## How It Works
+## Architecture
 
 ```
-┌─────────────┐     MCP Protocol     ┌──────────────────┐     API     ┌──────────────┐
-│  AI Agent   │ ◄──────────────────► │ SkillFlow MCP    │ ◄─────────► │  SkillFlow   │
-│ (Claude,    │  stdio / HTTP+SSE    │ Server           │             │  Marketplace │
-│  Cursor...) │                       └──────────────────┘             └──────────────┘
+┌─────────────┐     MCP Protocol     ┌──────────────────┐     tRPC API     ┌──────────────┐
+│  AI Agent   │ ◄──────────────────► │ SkillFlow MCP    │ ◄──────────────► │  SkillFlow   │
+│ (Claude,    │  stdio / HTTP+SSE    │ Server           │   (live data)    │  Backend     │
+│  Cursor...) │                       └──────────────────┘                  └──────────────┘
 └─────────────┘
 ```
 
-The MCP server acts as a bridge between AI coding agents and the SkillFlow marketplace, translating natural language requests into structured skill data.
+The MCP server acts as a bridge between AI coding agents and the SkillFlow marketplace. It fetches real-time data from the SkillFlow backend API with 5-minute caching for optimal performance.
 
 ## Listed On
 

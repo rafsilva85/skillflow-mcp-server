@@ -1,7 +1,7 @@
 {
   "name": "skillflow-mcp-server",
-  "version": "1.1.0",
-  "description": "MCP Server for SkillFlow - Connect AI coding agents to 500+ curated AI skills. Supports stdio and Streamable HTTP transports.",
+  "version": "2.0.0",
+  "description": "MCP Server for SkillFlow — Connect AI coding agents to the SkillFlow AI skills marketplace. Live API integration with real-time data. Supports stdio and Streamable HTTP transports.",
   "main": "dist/index.js",
   "bin": {
     "skillflow-mcp": "dist/index.js",
