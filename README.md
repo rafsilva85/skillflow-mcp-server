@@ -22,7 +22,16 @@ AI agents are the new users. Instead of browsing a website, agents can now **pro
 - **Zero config** — no API keys, no environment variables, just `npx`
 - **Works everywhere** — Claude Desktop, Cursor, Windsurf, Copilot, Gemini CLI, and any MCP-compatible agent
 
-## Quick Start
+## Transports
+
+This server supports two transports:
+
+| Transport | Use Case | Command |
+|-----------|----------|----------|
+| **stdio** | Local use with Claude Desktop, Cursor, etc. | `npx skillflow-mcp-server` |
+| **Streamable HTTP** | Remote access via Smithery.ai, cloud agents | `skillflow-mcp-http` or `npm start:http` |
+
+## Quick Start (stdio — Local)
 
 ### One-liner (npx)
 
@@ -102,12 +111,41 @@ Once connected, ask your AI agent:
 - *"Show me skills by publisher rafsilva85"*
 - *"Find skills for code review automation"*
 
+## Quick Start (Streamable HTTP — Remote)
+
+### Self-hosted
+
+```bash
+npm install -g skillflow-mcp-server
+PORT=3000 skillflow-mcp-http
+```
+
+### Docker
+
+```bash
+docker build -t skillflow-mcp .
+docker run -p 3000:3000 skillflow-mcp
+```
+
+### Smithery.ai
+
+Available at: [smithery.ai/server/skillflow-mcp-server](https://smithery.ai/server/skillflow-mcp-server)
+
+### HTTP API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/mcp` | Send JSON-RPC requests (initialize, tools/list, tools/call) |
+| `GET` | `/mcp` | Open SSE stream for server notifications |
+| `DELETE` | `/mcp` | Terminate a session |
+| `GET` | `/health` | Health check |
+
 ## How It Works
 
 ```
 ┌─────────────┐     MCP Protocol     ┌──────────────────┐     API     ┌──────────────┐
 │  AI Agent   │ ◄──────────────────► │ SkillFlow MCP    │ ◄─────────► │  SkillFlow   │
-│ (Claude,    │    stdio transport    │ Server           │             │  Marketplace │
+│ (Claude,    │  stdio / HTTP+SSE    │ Server           │             │  Marketplace │
 │  Cursor...) │                       └──────────────────┘             └──────────────┘
 └─────────────┘
 ```
@@ -121,6 +159,7 @@ The MCP server acts as a bridge between AI coding agents and the SkillFlow marke
 - [MCP Market](https://mcpmarket.com)
 - [mcpservers.org](https://mcpservers.org)
 - [Glama.ai](https://glama.ai/mcp/servers)
+- [Smithery.ai](https://smithery.ai/server/skillflow-mcp-server)
 
 ## Development
 
